@@ -3,10 +3,10 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2020-12-11 Fri 13:17 -->
+<!-- 2020-12-11 Fri 14:28 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AJV Performance Benchmarking</title>
+<title>Author API Profiling &amp; Optimisation</title>
 <meta name="generator" content="Org mode" />
 <meta name="author" content="Thomas Baggaley" />
 <style type="text/css">
@@ -219,76 +219,76 @@
 </head>
 <body>
 <div id="content">
-<h1 class="title">AJV Performance Benchmarking</h1>
+<h1 class="title">Author API Profiling &amp; Optimisation</h1>
 <div id="table-of-contents">
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgefce645">1. Issue</a></li>
-<li><a href="#org833bf82">2. First culprit - AJV</a>
+<li><a href="#org32d82d1">1. Issue</a></li>
+<li><a href="#org15a48ec">2. First culprit - AJV</a>
 <ul>
-<li><a href="#org42be90a">2.1. Performance analysis of AJV&rsquo;s <code>validate</code> call</a>
+<li><a href="#org898429e">2.1. Performance analysis of AJV&rsquo;s <code>validate</code> call</a>
 <ul>
-<li><a href="#org799864e">2.1.1. Benchmarking of execution time as survey size increases</a></li>
-<li><a href="#orgff422f9">2.1.2. Flame chart</a></li>
+<li><a href="#org702ebc8">2.1.1. Benchmarking of execution time as survey size increases</a></li>
+<li><a href="#orgdb44a84">2.1.2. Flame chart</a></li>
 </ul>
 </li>
-<li><a href="#orgedf59f0">2.2. Optimising custom keywords</a>
+<li><a href="#org381c681">2.2. Optimising custom keywords</a>
 <ul>
-<li><a href="#org04b9f6c">2.2.1. Optimising validatePipingInTitle</a></li>
+<li><a href="#orga1c5bdb">2.2.1. Optimising validatePipingInTitle</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orgde4620d">3. Second culprit - slow code in <code>src/validation/index.js</code></a>
+<li><a href="#org61a79a2">3. Second culprit - slow code in <code>src/validation/index.js</code></a>
 <ul>
-<li><a href="#org94cc231">3.1. Optimising the validation code</a></li>
+<li><a href="#org10c1721">3.1. Optimising the validation code</a></li>
 </ul>
 </li>
-<li><a href="#org7a40c5f">4. Results</a>
+<li><a href="#orge558a4b">4. Results</a>
 <ul>
-<li><a href="#org07fd734">4.1. Effect on response times</a></li>
+<li><a href="#orgaee900d">4.1. Effect on response times</a></li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-orgefce645" class="outline-2">
-<h2 id="orgefce645"><span class="section-number-2">1</span> Issue</h2>
+<div id="outline-container-org32d82d1" class="outline-2">
+<h2 id="org32d82d1"><span class="section-number-2">1</span> Issue</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 GraphQL responses take a long time for larger surveys. Loading the current draft of the Low Carbon Survey takes anywhere in the range of 500ms to over 1s for each response to resolve:
 </p>
 
 
-<div id="org7c502ef" class="figure">
+<div id="org7c4330d" class="figure">
 <p><img src="./network_preopt.png" alt="network_preopt.png" />
 </p>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org833bf82" class="outline-2">
-<h2 id="org833bf82"><span class="section-number-2">2</span> First culprit - AJV</h2>
+<div id="outline-container-org15a48ec" class="outline-2">
+<h2 id="org15a48ec"><span class="section-number-2">2</span> First culprit - AJV</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 Disabling AJV entirely results in response times resolving in approx. 100ms:
 </p>
 
 
-<div id="org752147c" class="figure">
+<div id="orgc8ab17c" class="figure">
 <p><img src="./network_noajv.png" alt="network_noajv.png" />
 </p>
 </div>
 </div>
 
-<div id="outline-container-org42be90a" class="outline-3">
-<h3 id="org42be90a"><span class="section-number-3">2.1</span> Performance analysis of AJV&rsquo;s <code>validate</code> call</h3>
+<div id="outline-container-org898429e" class="outline-3">
+<h3 id="org898429e"><span class="section-number-3">2.1</span> Performance analysis of AJV&rsquo;s <code>validate</code> call</h3>
 <div class="outline-text-3" id="text-2-1">
 </div>
-<div id="outline-container-org799864e" class="outline-4">
-<h4 id="org799864e"><span class="section-number-4">2.1.1</span> Benchmarking of execution time as survey size increases</h4>
+<div id="outline-container-org702ebc8" class="outline-4">
+<h4 id="org702ebc8"><span class="section-number-4">2.1.1</span> Benchmarking of execution time as survey size increases</h4>
 <div class="outline-text-4" id="text-2-1-1">
 <p>
 To determine the contribution of AJV itself to the problem, the <code>validate</code> function call was called with a varying size questionnaire based on the Low Carbon Survey draft.
@@ -299,7 +299,7 @@ The final section of the survey was duplicated to take the questionnaire to 25 s
 </p>
 
 
-<div id="orgb8f5c63" class="figure">
+<div id="org833efd4" class="figure">
 <p><img src="./Benchmark pre-optimisation.png" alt="Benchmark pre-optimisation.png" />
 </p>
 </div>
@@ -310,15 +310,15 @@ As can be seen, AJV itself - even with our custom keywords - is only responsible
 </div>
 </div>
 
-<div id="outline-container-orgff422f9" class="outline-4">
-<h4 id="orgff422f9"><span class="section-number-4">2.1.2</span> Flame chart</h4>
+<div id="outline-container-orgdb44a84" class="outline-4">
+<h4 id="orgdb44a84"><span class="section-number-4">2.1.2</span> Flame chart</h4>
 <div class="outline-text-4" id="text-2-1-2">
 <p>
 Below is a flame chart showing where CPU time is spent during the <code>validate(questionnaire)</code> call in <code>src/validation/index.js</code>:
 </p>
 
 
-<div id="orgb823962" class="figure">
+<div id="orgf700c48" class="figure">
 <p><img src="./flame_chart.png" alt="flame_chart.png" />
 </p>
 </div>
@@ -330,8 +330,8 @@ This shows that the majority of CPU time is spent in the <code>cheerio</code> de
 </div>
 </div>
 
-<div id="outline-container-orgedf59f0" class="outline-3">
-<h3 id="orgedf59f0"><span class="section-number-3">2.2</span> Optimising custom keywords</h3>
+<div id="outline-container-org381c681" class="outline-3">
+<h3 id="org381c681"><span class="section-number-3">2.2</span> Optimising custom keywords</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 Disabling custom keywords entirely resulted in AJV <code>validate</code> times in the order of 1 - 2 ms for the 18 section draft LCS, showing that our custom keyword code was significantly slowing down execution.
@@ -342,15 +342,15 @@ Searching for <code>getPreviousAnswersForPage</code> in the custom keywords file
 </p>
 </div>
 
-<div id="outline-container-org04b9f6c" class="outline-4">
-<h4 id="org04b9f6c"><span class="section-number-4">2.2.1</span> Optimising validatePipingInTitle</h4>
+<div id="outline-container-orga1c5bdb" class="outline-4">
+<h4 id="orga1c5bdb"><span class="section-number-4">2.2.1</span> Optimising validatePipingInTitle</h4>
 <div class="outline-text-4" id="text-2-2-1">
 <p>
 <code>validatePipingInTitle</code> used the <code>cheerio</code> library to parse HTML in the question title - and as can be seen by the flame graph this was a very resource-intensive process. The HTML was parsed in order to find the included piped answer IDs - if any.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-javascript" id="orga934a4f">      <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">$</span> = cheerio.load(entityData);
+<pre class="src src-javascript" id="org392c6b9">      <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">$</span> = cheerio.load(entityData);
       <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">pipedIdList</span> = [];
 
       $(<span style="color: #98be65;">"p"</span>)
@@ -366,7 +366,7 @@ Replacing this approach with a regular expression maintained the original behavi
 </p>
 
 <div class="org-src-container">
-<pre class="src src-javascript" id="orgde102ca">      <span style="color: #5B6268;">//</span><span style="color: #5B6268;">... in file scope</span>
+<pre class="src src-javascript" id="orgc8e522c">      <span style="color: #5B6268;">//</span><span style="color: #5B6268;">... in file scope</span>
       <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">pipedAnswerIdRegex</span> = <span style="color: #98be65;">/data-piped="answers" data-id="(.+?)"/</span>gm;
 
       <span style="color: #5B6268;">//</span><span style="color: #5B6268;">... within custom validation function</span>
@@ -390,15 +390,15 @@ Making this change and re-running the benchmark showed that the execution time f
 </div>
 </div>
 
-<div id="outline-container-orgde4620d" class="outline-2">
-<h2 id="orgde4620d"><span class="section-number-2">3</span> Second culprit - slow code in <code>src/validation/index.js</code></h2>
+<div id="outline-container-org61a79a2" class="outline-2">
+<h2 id="org61a79a2"><span class="section-number-2">3</span> Second culprit - slow code in <code>src/validation/index.js</code></h2>
 <div class="outline-text-2" id="text-3">
 <p>
 With the above changes made and AJV performance improved, the following is a flame chart of the API server while running under load (repeatedly requesting questionnaire &amp; pages from the UI):
 </p>
 
 
-<div id="orgf273899" class="figure">
+<div id="org3927d80" class="figure">
 <p><img src="./flame_server_pre.png" alt="flame_server_pre.png" />
 </p>
 </div>
@@ -412,8 +412,8 @@ The key culprit seems to be the section involving calling the lodash <code>uniqW
 </p>
 </div>
 
-<div id="outline-container-org94cc231" class="outline-3">
-<h3 id="org94cc231"><span class="section-number-3">3.1</span> Optimising the validation code</h3>
+<div id="outline-container-org10c1721" class="outline-3">
+<h3 id="org10c1721"><span class="section-number-3">3.1</span> Optimising the validation code</h3>
 <div class="outline-text-3" id="text-3-1">
 <p>
 <code>src/validation/index.js</code> calls AJV via <code>validate(questionnaire)</code> and then proceeeds to generate a list of error messages using <code>createValidationError</code>.
@@ -424,7 +424,7 @@ The part which was the performance bottleneck was that which checked for duplica
 </p>
 
 <div class="org-src-container">
-<pre class="src src-javascript" id="org1d080dc">  <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">uniqeErrorMessages</span> = uniqWith(formattedErrorMessages, (one, two) =&gt; {
+<pre class="src src-javascript" id="orge6a4d71">  <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">uniqeErrorMessages</span> = uniqWith(formattedErrorMessages, (one, two) =&gt; {
     <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">oneClone</span> = Object.assign({}, one);
     <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">twoClone</span> = Object.assign({}, two);
 
@@ -455,7 +455,7 @@ The new approach is as follows:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-javascript" id="org434fa38">  <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">uniqueErrorMessages</span> = {};
+<pre class="src src-javascript" id="orge62617f">  <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">uniqueErrorMessages</span> = {};
   <span style="color: #51afef;">const</span> <span style="color: #dcaeea;">formattedErrorMessages</span> = [];
 
   <span style="color: #51afef;">for</span> (<span style="color: #51afef;">const</span> <span style="color: #dcaeea;">err</span> of validate.errors) {
@@ -478,19 +478,19 @@ The new approach is as follows:
 
 
 
-<div id="outline-container-org7a40c5f" class="outline-2">
-<h2 id="org7a40c5f"><span class="section-number-2">4</span> Results</h2>
+<div id="outline-container-orge558a4b" class="outline-2">
+<h2 id="orge558a4b"><span class="section-number-2">4</span> Results</h2>
 <div class="outline-text-2" id="text-4">
 </div>
-<div id="outline-container-org07fd734" class="outline-3">
-<h3 id="org07fd734"><span class="section-number-3">4.1</span> Effect on response times</h3>
+<div id="outline-container-orgaee900d" class="outline-3">
+<h3 id="orgaee900d"><span class="section-number-3">4.1</span> Effect on response times</h3>
 <div class="outline-text-3" id="text-4-1">
 <p>
 With these two changes, the overall response times are down to a level similar to that expected with validation disabled in the server code:
 </p>
 
 
-<div id="orgbb36f55" class="figure">
+<div id="org04e0265" class="figure">
 <p><img src="./network_postopt3.png" alt="network_postopt3.png" />
 </p>
 </div>
@@ -504,7 +504,7 @@ This represents a reduction in total response times of up to 80-90% compared to 
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Thomas Baggaley</p>
-<p class="date">Created: 2020-12-11 Fri 13:17</p>
+<p class="date">Created: 2020-12-11 Fri 14:28</p>
 </div>
 </body>
 </html>
