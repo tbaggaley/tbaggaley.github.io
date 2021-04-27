@@ -1,0 +1,863 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <!-- 2021-04-27 Tue 16:42 -->
+  <meta http-equiv="Content-Type" content=
+  "text/html; charset=utf-8" />
+  <meta name="viewport" content=
+  "width=device-width, initial-scale=1" />
+  <title>Race conditions in Author API</title>
+  <meta name="author" content="Thomas Baggaley" />
+  <meta name="generator" content="Org Mode" />
+  <style type="text/css">
+  <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+  </style>
+  <link rel="stylesheet" type="text/css" href=
+  "https://gongzhitaao.org/orgcss/org.css" />
+  <script type="text/javascript">
+  // @license magnet:?xt=urn:btih:e95b018ef3580986a04669f1b5879592219e2a7a&dn=public-domain.txt Public Domain
+  <!--/*--><![CDATA[/*><!--*/
+     function CodeHighlightOn(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.add("code-highlighted");
+         target.classList.add("code-highlighted");
+       }
+     }
+     function CodeHighlightOff(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.remove("code-highlighted");
+         target.classList.remove("code-highlighted");
+       }
+     }
+    /*]]>*///-->
+  // @license-end
+  </script>
+</head>
+<body>
+  <div id="content">
+    <h1 class="title">Race conditions in Author API</h1>
+    <div id="table-of-contents">
+      <h2>Table of Contents</h2>
+      <div id="text-table-of-contents">
+        <ul>
+          <li>
+            <a href="#orgb1154e3">1. The problem</a>
+            <ul>
+              <li><a href="#orgf745400">1.1. Local
+              reproduction</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org15b80d3">2. Solutions</a>
+            <ul>
+              <li>
+                <a href="#orga993f8f">2.1. Transactions</a>
+                <ul>
+                  <li><a href="#org75c3089">2.1.1. MongoDB</a></li>
+                </ul>
+              </li>
+              <li><a href="#orgf7f292a">2.2. Optimistic
+              locking</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#org5abad02">3. Application to Author</a>
+            <ul>
+              <li><a href="#org7c7a6f0">3.1. Current API data
+              architecture</a></li>
+              <li>
+                <a href="#org9c14e86">3.2. Option 1: Adding
+                transactions</a>
+                <ul>
+                  <li><a href="#org0fc2df2">3.2.1. Transactions
+                  <i>inside</i> mutation resolvers</a></li>
+                  <li><a href="#org415cebf">3.2.2. Transactions as
+                  part of <code>createMutation</code>
+                  wrapper</a></li>
+                </ul>
+              </li>
+              <li><a href="#org74ac505">3.3. Option 2: Using DIY
+              optimistic locking</a></li>
+            </ul>
+          </li>
+          <li><a href="#org7f6cca8">4. Further steps</a></li>
+        </ul>
+      </div>
+    </div>
+    <div id="outline-container-orgb1154e3" class="outline-2">
+      <h2 id="orgb1154e3"><span class="section-number-2">1</span>
+      The problem</h2>
+      <div class="outline-text-2" id="text-1">
+        <p>Since Author stores questionnaires as standalone JSON
+        documents (and MongoDB reads and writes these atomically)
+        concurrent updates to the same questionnaire have a risk of
+        being lost.</p>
+        <div id="orgb2a5485" class="figure">
+          <p><img src="./racedb.jpg" alt="racedb.jpg" /></p>
+          <p><span class="figure-number">Figure 1:</span> The
+          current state of affairs. MongoDB smiles on as writes
+          disappear into the æther.</p>
+        </div>
+        <p>In <i>Figure 1</i>, two clients concurrently (i.e.
+        unaware of the other’s actions) make two seemingly
+        unrelated changes to the same questionnaire. <i>Client
+        1</i> wants to change the questionnaire’s title; <i>Client
+        2</i> wants to add a new question page.</p>
+        <p>Their requests are routed to two separate API containers
+        - but this could also occur with two concurrent requests to
+        the same container since NodeJS will start executing the
+        second request while the first is blocked, waiting for IO.
+        If you spam graphql calls, especially on large
+        questionnaires, you can see this issue in action despite
+        having very low network latency and a single server
+        instance.</p>
+      </div>
+      <div id="outline-container-orgf745400" class="outline-3">
+        <h3 id="orgf745400"><span class=
+        "section-number-3">1.1</span> Local reproduction</h3>
+        <div class="outline-text-3" id="text-1-1">
+          <p>Here’s a quick and dirty way to show it in action.
+          <code>withDuplicatePage.js:26</code> was modified so that
+          it prints out the current section’s page count when a
+          page is duplicated:</p>
+          <div class="org-src-container">
+            <pre class="src src-javascript">    <span style=
+            "color: #c099ff;">return</span> mutate({
+      variables: { input },
+    })
+      .then(get(<span style=
+"color: #c3e88d;">"data.duplicatePage"</span>))
+      .then((data) =&gt; {
+        console.log(<span style=
+"color: #c3e88d;">"Pages in section: "</span>, countPagesInSection(data.section));
+        <span style="color: #c099ff;">return</span> data;
+      })
+      .then(tap(redirectToNewPage(ownProps)));
+</pre>
+          </div>
+          <p>I then hit the “Duplicate” button like a madman.
+          Here’s the result:</p>
+          <div id="org550ca26" class="figure">
+            <p><img src="./duplicaterace.png" alt=
+            "duplicaterace.png" /></p>
+            <p><span class="figure-number">Figure 2:</span> Le
+            console after rapid duplication</p>
+          </div>
+          <p>We expect a monotonically increasing amount of pages -
+          but as can be seen, sometimes the page count is unchanged
+          and sometimes even goes down as later responses come
+          through to the client. Only a few of the actual duplicate
+          requests have made their mark on the questionnaire
+          itself, having been overwritten by other concurrent
+          attempts at duplication.</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org15b80d3" class="outline-2">
+      <h2 id="org15b80d3"><span class="section-number-2">2</span>
+      Solutions</h2>
+      <div class="outline-text-2" id="text-2">
+        <p>The general problem is this: we read data and may later
+        change it - but when we do, we do not know if the original
+        data has been changed. If it has, the foreign changes will
+        be completely lost.</p>
+        <p>To solve this, we have to rely on some flavour of
+        locking <sup><a id="fnr.1" class="footref" href="#fn.1"
+        name="fnr.1">1</a></sup>.</p>
+      </div>
+      <div id="outline-container-orga993f8f" class="outline-3">
+        <h3 id="orga993f8f"><span class=
+        "section-number-3">2.1</span> Transactions</h3>
+        <div class="outline-text-3" id="text-2-1">
+          <p>In traditional relational databases, locking is done
+          for you by the database engine via transactions - either
+          explicitly through the use of <code>SELECT ... FOR
+          UPDATE</code><sup><a id="fnr.2" class="footref" href=
+          "#fn.2" name="fnr.2">2</a></sup> or through cranking up
+          the isolation level<sup><a id="fnr.3" class="footref"
+          href="#fn.3" name="fnr.3">3</a></sup> and leaving it to
+          the database vendors to figure out.</p>
+        </div>
+        <div id="outline-container-org75c3089" class="outline-4">
+          <h4 id="org75c3089"><span class=
+          "section-number-4">2.1.1</span> MongoDB</h4>
+          <div class="outline-text-4" id="text-2-1-1">
+            <p>MongoDB does have some support for transactions
+            <sup><a id="fnr.4" class="footref" href="#fn.4" name=
+            "fnr.4">4</a></sup> although the focus is on their use
+            when writes span multiple documents. Starting a
+            transaction requires initiating a client session and
+            providing a async function which serves as the
+            transaction body; exceptions may then be thrown and
+            caught if the transaction fails.</p>
+            <p>The property of MongoDB’s transactions relevant for
+            this use case is that when another write occurs to an
+            object read as part of a transaction, the transaction
+            will be made to fail and a <code>writeConflict</code>
+            exception thrown - see e.g. <a href=
+            "https://www.mongodb.com/blog/post/how-to-select--for-update-inside-mongodb-transactions">
+            here for more details</a>.</p>
+            <p>This could then be caught by the API server and the
+            request re-processed as necessary.</p>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-orgf7f292a" class="outline-3">
+        <h3 id="orgf7f292a"><span class=
+        "section-number-3">2.2</span> Optimistic locking</h3>
+        <div class="outline-text-3" id="text-2-2">
+          <p>An alternative approach to using transactions is to
+          manually implement a form of optimistic
+          locking<sup><a id="fnr.5" class="footref" href="#fn.5"
+          name="fnr.5">5</a></sup> by modifying the query of
+          MongoDB’s <code>update</code> function (which would be
+          called in e.g. <code>saveQuestionnaire</code> in Author).
+          Instead of querying just for the questionnaire ID, we add
+          a new unique ID which changes between saves - either a
+          UUID or a monotonically increasing integer.</p>
+          <p>This <a href=
+          "https://stackoverflow.com/questions/16523621/atomicity-and-cas-operations-in-mongodb">
+          stack overflow answer</a> details the technique. If the
+          “losing” container / nodeJS task tries to update a
+          questionnaire which has changed, this new unique ID will
+          have been changed as part of the foreign write, the
+          <code>update</code> query will no longer match any
+          documents and nothing will be written.</p>
+          <p>The application can then query to see if the write was
+          successful - if not, it knows it needs to retry.</p>
+          <p>Such an approach is mentioned briefly on the MongoDB
+          docs concerning concurrency control:</p>
+          <blockquote>
+            <p>Another approach is to specify the expected current
+            value of a field in the query predicate for the write
+            operations. – <a href=
+            "https://docs.mongodb.com/manual/core/write-operations-atomicity">
+            Atomicity and Transactions — MongoDB Manual</a></p>
+          </blockquote>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org5abad02" class="outline-2">
+      <h2 id="org5abad02"><span class="section-number-2">3</span>
+      Application to Author</h2>
+      <div class="outline-text-2" id="text-3">
+        <p>Any solution applied to Author will need to take into
+        consideration current patterns within Author API - or at
+        least weigh up the developer time and cost of refactoring
+        existing code (unless beneficial for other features down
+        the line) versus getting something which works and requires
+        minimal other changes.</p>
+        <p>To help decide, first we have a quick recap of Author’s
+        current data flow and then consider the changes which would
+        be required to implement transactions or “manual”
+        optimistic locking.</p>
+      </div>
+      <div id="outline-container-org7c7a6f0" class="outline-3">
+        <h3 id="org7c7a6f0"><span class=
+        "section-number-3">3.1</span> Current API data
+        architecture</h3>
+        <div class="outline-text-3" id="text-3-1">
+          <p>The following is a rough sketch of how things
+          currently work (generally) in Author API.</p>
+          <div id="org810548e" class="figure">
+            <p><img src="./current-api.jpg" alt=
+            "current-api.jpg" /></p>
+            <p><span class="figure-number">Figure 3:</span> Current
+            data architecture for Author API, as regards modifying
+            questionnaires</p>
+          </div>
+          <p>The flow is as follows:</p>
+          <ol class="org-ol">
+            <li>The <code>loadQuestionnaire</code> middleware uses
+            the <code>questionnaireId</code> header passed in with
+            each request to identify the active questionnaire</li>
+            <li><code>loadQuestionnaire</code> fetches the
+            questionnaire from MongoDB and stores it in the
+            <code>ctx</code> accessible to all GraphQL
+            resolvers</li>
+            <li>GraphQL queries are parsed by Apollo server and
+            trigger execution of all relevant resolvers. Resolvers
+            pull data out of <code>ctx.questionnaire</code> to find
+            what they need</li>
+            <li>Mutations mutate <code>ctx.questionnaire</code> in
+            place and use a helper function,
+            <code>createMutation</code>, which takes care of the
+            business of saving the questionnaire</li>
+            <li><code>createMutation</code> saves the questionnaire
+            to MongoDB by updating the document with ID
+            <code>ctx.questionnaire.id</code> and replacing it with
+            the contents of <code>ctx.questionnaire</code></li>
+            <li>A response is sent to the client by Apollo server
+            based on the resolvers’ return values</li>
+          </ol>
+        </div>
+      </div>
+      <div id="outline-container-org9c14e86" class="outline-3">
+        <h3 id="org9c14e86"><span class=
+        "section-number-3">3.2</span> Option 1: Adding
+        transactions</h3>
+        <div class="outline-text-3" id="text-3-2">
+          <p>Using MongoDB transactions would require both reading
+          <i>and</i> writing the questionnaire as part of one
+          transaction.</p>
+          <p>Since at present these two stages are decoupled - the
+          <i>reading</i> happens in the express middleware function
+          <code>loadQuestionnaire</code> while the <i>writing</i>
+          happens in the Apollo server then mutation-triggered
+          <code>createMutation</code> function - this represent a
+          change compared to the current approach.</p>
+        </div>
+        <div id="outline-container-org0fc2df2" class="outline-4">
+          <h4 id="org0fc2df2"><span class=
+          "section-number-4">3.2.1</span> Transactions
+          <i>inside</i> mutation resolvers</h4>
+          <div class="outline-text-4" id="text-3-2-1">
+            <p>Mutations would have to start a transaction, read
+            the questionnaire, modify the questionnaire and then
+            commit the transaction. Exceptions thrown by the
+            transaction could be caught and the mutation
+            re-attempted, e.g. by simply re-running the entire
+            function body. There would be no more mutation of
+            <code>ctx.questionnaire</code> since the data fetching
+            would have to happen as part of the mutation’s
+            lifetime.</p>
+          </div>
+        </div>
+        <div id="outline-container-org415cebf" class="outline-4">
+          <h4 id="org415cebf"><span class=
+          "section-number-4">3.2.2</span> Transactions as part of
+          <code>createMutation</code> wrapper</h4>
+          <div class="outline-text-4" id="text-3-2-2">
+            <p>Transactions could potentially be incorporated into
+            <code>createMutation</code> by having
+            <code>createMutation</code> load the questionnaire, pop
+            it into <code>ctx</code>, call the custom mutation
+            code, save the questionnaire and then end the
+            transaction. Potentially errors could be handled inside
+            <code>createMutation</code> in a similar way too - the
+            entire thing could be repeated if the transaction fails
+            to commit. Custom callbacks passed to
+            <code>createMutation</code> would need to be
+            idempotent<sup><a id="fnr.6" class="footref" href=
+            "#fn.6" name="fnr.6">6</a></sup> given any particular
+            <code>ctx.questionnaire</code>, which is likely (?)
+            already the case.</p>
+            <p>As part of the spike, I had a quick go at enabling
+            transactions by making <code>createMutation</code> use
+            a new wrapper function wrapping questionnaire access in
+            a transaction:</p>
+            <div class="org-src-container">
+              <pre class="src src-javascript"><span style=
+              "color: #c099ff;">const</span> <span style=
+              "color: #ff98a4;">withQuestionnaireTransaction</span> = <span style="color: #c099ff;">async</span> (questionnaireId, fn) =&gt; {
+  <span style="color: #c099ff;">const</span> <span style=
+"color: #ff98a4;">session</span> = client.startSession();
+  <span style="color: #c099ff;">try</span> {
+    <span style="color: #c099ff;">return</span> <span style=
+"color: #c099ff;">await</span> session.withTransaction(<span style=
+"color: #c099ff;">async</span> () =&gt; {
+      <span style="color: #c099ff;">const</span> <span style=
+"color: #ff98a4;">questionnaire</span> = <span style=
+"color: #c099ff;">await</span> getQuestionnaire(questionnaireId, session);
+      <span style=
+"color: #c099ff;">await</span> fn(questionnaire, session);
+    }, transactionOptions);
+  } <span style="color: #c099ff;">catch</span> (e) {
+    console.log(<span style=
+"color: #c3e88d;">"TRANSACTION FAILED"</span>);
+  } <span style="color: #c099ff;">finally</span> {
+    <span style=
+"color: #c099ff;">await</span> session.endSession();
+  }
+};
+</pre>
+            </div>
+            <p>The wrapper provides a fresh copy of the
+            questionnaire and a <code>session</code> variable to
+            pass into calls you wish to be part of the
+            transaction.</p>
+            <p>This quickly ran into the error reported
+            elsewhere<sup><a id="fnr.7" class="footref" href=
+            "#fn.7" name="fnr.7">7</a></sup> - <code>ERROR
+            (MongoError): Unable to get latest version of
+            questionnaire with ID:
+            80bac2f3-56aa-4c5d-9033-be65ff1b65e3</code> which
+            occurs when MongoDB isn’t running as a replica set. Our
+            development MongoDB instance is run as a standalone
+            server, ruling this out without switching to a replica
+            set instead. This would take a bit more investigation
+            to see how long it’d take to get working - there are
+            some resources<sup><a id="fnr.8" class="footref" href=
+            "#fn.8" name="fnr.8">8</a></sup> around which might
+            simplify it.</p>
+            <p>Testing on our staging AWS Documentdb, however, was
+            a resounding success! With an ssh tunnel allowing
+            access to DocumentDB, I wired up my local dev server to
+            use the DocumentDB server as its database. Spamming
+            duplicate like a madman now results in a pleasingly
+            monotonically increasing amount of pages in the
+            section!</p>
+            <div id="orgb1be277" class="figure">
+              <p><img src="./success.png" alt="success.png" /></p>
+            </div>
+            <p>I used <code>createMutation</code> to handle the
+            retry logic when a transaction failed and used the
+            above <code>withQuestionnaireTransaction</code> code to
+            perform the actual transaction passed in via
+            <code>fn</code>, which has the advantage of allowing
+            most of our mutation code to remain unchanged. Note
+            that <code>saveQuestionnaire</code> and
+            <code>getQuestionnaire</code> were modified to accept
+            an optional <code>session</code> parameter for passing
+            to the internal MongoDB calls (for association of the
+            calls with the transaction).</p>
+            <div class="org-src-container">
+              <pre class="src src-javascript">  <span style=
+              "color: #c099ff;">const</span> <span style=
+              "color: #ff98a4;">questionnaireId</span> = ctx.questionnaire.id;
+
+  <span style="color: #c099ff;">let</span> <span style=
+"color: #ff98a4;">result</span>, <span style=
+"color: #ff98a4;">transactionSuccessful</span>;
+  <span style="color: #c099ff;">for</span> (
+    <span style="color: #c099ff;">let</span> <span style=
+"color: #ff98a4;">retryCount</span> = <span style=
+"color: #ff995e; font-weight: bold;">0</span>;
+    retryCount &lt; MAX_RETRIES &amp;&amp; !transactionSuccessful;
+    retryCount++
+  ) {
+    transactionSuccessful = <span style=
+"color: #c099ff;">await</span> withQuestionnaireTransaction(
+      questionnaireId,
+      <span style=
+"color: #c099ff;">async</span> (questionnaire, session) =&gt; {
+        ctx.questionnaire = questionnaire;
+        result = <span style=
+"color: #c099ff;">await</span> mutation(root, args, ctx);
+
+        <span style=
+"color: #c099ff;">if</span> (ctx.questionnaire.publishStatus === PUBLISHED) {
+          ctx.questionnaire.publishStatus = UNPUBLISHED;
+          ctx.questionnaire.surveyVersion++;
+          hasBeenUnpublished = <span style=
+"color: #ff995e;">true</span>;
+          <span style=
+"color: #c099ff;">await</span> createHistoryEvent(
+            ctx.questionnaire.id,
+            publishStatusEvent(ctx)
+          );
+        }
+
+        <span style=
+"color: #c099ff;">await</span> saveQuestionnaire(ctx.questionnaire, session);
+      }
+    );
+  }
+
+  <span style=
+"color: #c099ff;">if</span> (!transactionSuccessful) {
+    <span style="color: #c099ff;">throw</span> <span style=
+"color: #c099ff;">new</span> <span style=
+"color: #ffc777;">Error</span>(
+      <span style=
+"color: #c3e88d;">`Failed to commit transaction after ${MAX_RETRIES} retries.`</span>
+    );
+  }
+</pre>
+            </div>
+            <p><code>createMutation</code> therefore attempts to
+            apply the mutation at most <code>MAX_RETRIES</code>
+            times before giving up with an exception.</p>
+            <p>Note that we have to re-fetch the questionnaire as
+            part of <code>createMutation</code> in order for
+            MongoDB to associate that read with the on-going
+            transaction. This is inefficient since we already read
+            it in the middleware (via
+            <code>loadQuestionnaire</code>) - this could be
+            remedied by e.g. lazily fetching the ctx.questionnaire
+            as part of <code>loadQuestionnaire</code> instead of
+            always fetching it, since mutations using this new
+            approach will not utilise that read (but resolvers
+            still would).</p>
+            <p>The only downside to this at the moment is that it
+            does not work using a standalone MongoDB instance, as
+            used in the local dev environment. Work would need to
+            be done to enable the local service to run as a replica
+            set.</p>
+          </div>
+        </div>
+      </div>
+      <div id="outline-container-org74ac505" class="outline-3">
+        <h3 id="org74ac505"><span class=
+        "section-number-3">3.3</span> Option 2: Using DIY
+        optimistic locking</h3>
+        <div class="outline-text-3" id="text-3-3">
+          <p>DIY optimistic locking - implementing compare and
+          set<sup><a id="fnr.9" class="footref" href="#fn.9" name=
+          "fnr.9">9</a></sup> by taking advantage of MongoDB’s
+          ability to query and update documents in one step (and
+          querying on an ID which changes with every write -
+          hereafter the <i>CAS ID</i>) - is another approach which
+          sidesteps the need to use the transactions API,
+          <i>provided we only need to care about one document at a
+          time</i>.</p>
+          <p>In Author, however, we have to deal with two objects
+          on each save - those taken from the
+          <code>questionnaires</code> and those from the
+          <code>versions</code> collection.</p>
+          <p>The <code>questionnaires</code> collection provides
+          metadata about the questionnaire; each object within is a
+          slimmed-down version of the current state of the
+          questionnaire (which is stored as the latest object in
+          <code>versions</code> with the same ID).</p>
+          <p>At present, when any change is made to the
+          questionnaire, a new version object is inserted into the
+          <code>versions</code> collection corresponding to the
+          change. Since this collection always gets appended to
+          rather than having its documents modified we would have
+          to use a “compare and set ID” in a different place - such
+          as on the <code>questionnaires</code> metadata object for
+          the questionnaire.</p>
+          <p>This poses a problem because without multi-document
+          transactions (which we were hoping to sidestep if we went
+          down this route), it is possible that the CAS ID could be
+          updated on the <code>questionnaires</code> object and a
+          new change concurrently inserted into the
+          <code>versions</code> collection by a foreign write. The
+          technique only works if you can <i>atomically</i> update
+          the document AND check the CAS ID remains unchanged,
+          which we cannot do between two documents without using
+          multi-document transactions.</p>
+          <p>We <i>could</i> keep track of which questionnaires are
+          active by using only the <code>versions</code> collection
+          and doing away with <code>questionnaires</code>, ensuring
+          a single document atomic commit. But this is still
+          probably less preferable than using native MongoDB
+          transactions.</p>
+        </div>
+      </div>
+    </div>
+    <div id="outline-container-org7f6cca8" class="outline-2">
+      <h2 id="org7f6cca8"><span class="section-number-2">4</span>
+      Further steps</h2>
+      <div class="outline-text-2" id="text-4">
+        <p>During this spike, transactions were successfully
+        implemented - albeit when using a remote DocumentDB
+        cluster. Using transactions solved the initial problem of
+        lost writes as demonstrated using the page duplication
+        example, hopefully serving as a generic solution (relevant
+        to e.g. the “duplicate page bug” ticket and “answer labels
+        disappearing” ticket<sup><a id="fnr.10" class="footref"
+        href="#fn.10" name="fnr.10">10</a></sup> in the backlog)
+        for race conditions in Author’s DB usage.</p>
+        <p>DIY optimistic locking was considered but would require
+        changes to how we use our collections so that all
+        questionnaire data is saved atomically - not necessary if
+        transactions can be made to work.</p>
+        <p>Once working on the dev environment further work would
+        be needed to add relevant tests and ensure all existing
+        mutations continue to work. Some mutations, e.g.
+        <code>lockQuestionnaire</code> would need to be updated
+        manually to use the new
+        <code>withQuestionnaireTransaction</code> interface as they
+        intentionally bypass <code>createMutation</code>.</p>
+      </div>
+    </div>
+    <div id="footnotes">
+      <h2 class="footnotes">Footnotes:</h2>
+      <div id="text-footnotes">
+        <div class="footdef">
+          <sup><a id="fn.1" class="footnum" href="#fnr.1" name=
+          "fn.1">1</a></sup>
+          <div class="footpara">
+            <p class="footpara"><a href=
+            "https://en.wikipedia.org/wiki/Record_locking">https://en.wikipedia.org/wiki/Record_locking</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.2" class="footnum" href="#fnr.2" name=
+          "fn.2">2</a></sup>
+          <div class="footpara">
+            <p class="footpara">Locking reads in MySQL - <a href=
+            "https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html">
+            https://dev.mysql.com/doc/refman/8.0/en/innodb-locking-reads.html</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.3" class="footnum" href="#fnr.3" name=
+          "fn.3">3</a></sup>
+          <div class="footpara">
+            <p class="footpara">Transaction isolation levels in
+            PostgreSQL - <a href=
+            "https://www.postgresql.org/docs/9.5/transaction-iso.html">
+            https://www.postgresql.org/docs/9.5/transaction-iso.html</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.4" class="footnum" href="#fnr.4" name=
+          "fn.4">4</a></sup>
+          <div class="footpara">
+            <p class="footpara">MongoDB documentation: Transactions
+            - <a href=
+            "https://docs.mongodb.com/manual/core/transactions/">https://docs.mongodb.com/manual/core/transactions/</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.5" class="footnum" href="#fnr.5" name=
+          "fn.5">5</a></sup>
+          <div class="footpara">
+            <p class="footpara">Optimistic locking involves writing
+            changes “optimistically” - i.e. assuming that they will
+            succeed (“pessimistic” locking would be to take an
+            exclusive lock over the entire row / object in advance)
+            and then checking to see if any conflicts have ocurred
+            after the fact and rolling back. MongoDB’s transactions
+            themselves use an optimistic model where writes proceed
+            but are interrupted and reset if it detects another
+            concurrent (foreign) write. See e.g. <a href=
+            "https://en.wikipedia.org/wiki/Optimistic_concurrency_control">
+            https://en.wikipedia.org/wiki/Optimistic_concurrency_control</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.6" class="footnum" href="#fnr.6" name=
+          "fn.6">6</a></sup>
+          <div class="footpara">
+            <p class="footpara"><a href=
+            "https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning">
+            https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.7" class="footnum" href="#fnr.7" name=
+          "fn.7">7</a></sup>
+          <div class="footpara">
+            <p class="footpara">MongoDB needs to be running as a
+            replica set in order to allow transactions - <a href=
+            "https://stackoverflow.com/questions/62343611/enabling-mongodb-transactions-without-replica-sets-or-with-least-possible-config">
+            https://stackoverflow.com/questions/62343611/enabling-mongodb-transactions-without-replica-sets-or-with-least-possible-config</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.8" class="footnum" href="#fnr.8" name=
+          "fn.8">8</a></sup>
+          <div class="footpara">
+            <p class="footpara">Zero config MongoDB replica set
+            runner - <a href=
+            "http://thecodebarbarian.com/introducing-run-rs-zero-config-mongodb-runner">
+            http://thecodebarbarian.com/introducing-run-rs-zero-config-mongodb-runner</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.9" class="footnum" href="#fnr.9" name=
+          "fn.9">9</a></sup>
+          <div class="footpara">
+            <p class="footpara">Compare and set - <a href=
+            "https://en.wikipedia.org/wiki/Compare-and-swap">https://en.wikipedia.org/wiki/Compare-and-swap</a></p>
+          </div>
+        </div>
+        <div class="footdef">
+          <sup><a id="fn.10" class="footnum" href="#fnr.10" name=
+          "fn.10">10</a></sup>
+          <div class="footpara">
+            <p class="footpara">Bug ticket - answer labels
+            disappearing: <a href=
+            "https://collaborate2.ons.gov.uk/jira/browse/EAR-556">https://collaborate2.ons.gov.uk/jira/browse/EAR-556</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="postamble" class="status">
+    <p class="author">Author: Thomas Baggaley</p>
+    <p class="date">Created: 2021-04-27 Tue 16:42</p>
+  </div>
+</body>
+</html>
