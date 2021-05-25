@@ -1,0 +1,42 @@
+html {
+  width: 100vw;
+}
+
+body {
+  max-width: 900px;
+  margins: 0 auto;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+pre {
+  width: 100%;
+  overflow-x: scroll;
+  color: #444;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 5rem;
+}
+
+h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+h3 {
+  margin: 2rem 0;
+}
+
+h3 ~ p {
+  margin-left: 1.5rem;
+}
+
+section {
+  margin-bottom: 3rem;
+}
+
+.cursor {
+  opacity: 0.25;
+}
